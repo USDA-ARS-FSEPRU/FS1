@@ -1,5 +1,5 @@
 # getwd()
-setwd('~/FS1/Helping_Nicole/')
+# setwd('~/FS1/Helping_Nicole/')
 
 library(tidyverse)
 library(vegan)
@@ -8,7 +8,7 @@ library(funfuns)
 
 ####### Metadata extraction from sample names #######
 # WRITE METADATA OUT AND READ IN TO AVOID THIS SECTION #
-shared <- read.table('FS1.V4.shared', header = TRUE)   # this is the OTU table output by mothur
+shared <- read.table('./data/FS1.V4.shared', header = TRUE)   # this is the OTU table output by mothur
 
 meta <- shared[,c(1,2,3)]
 meta$day <- as.numeric(gsub('.*D([:digit:]*)','\\1', meta$Group))
@@ -41,7 +41,7 @@ meta$Group # checking on the sample names....
 
 # this is a metadata table we generated during the experiment
 
-master <- read.csv("FS1master.csv", header = TRUE, stringsAsFactors = TRUE) 
+master <- read.csv("./data/FS1master.csv", header = TRUE, stringsAsFactors = TRUE) 
 
 colnames(master)[1] <- 'pig_number'
 
@@ -64,7 +64,7 @@ rownames(shared) <- shared[,2]
 shared <- shared[,-c(1,2,3)]
 shared <- shared[rownames(shared) %in% rownames(mastermeta),]
 
-tax<-read.table("FS1.V4.taxonomy", header = TRUE, stringsAsFactors = FALSE, sep="\t")  #added by NR because it seems to be missing
+tax<-read.table("./data/FS1.V4.taxonomy", header = TRUE, stringsAsFactors = FALSE, sep="\t")  #added by NR because it seems to be missing
 colnames(tax)
 library(tidyverse)
 tax <- tax %>% separate(Taxonomy, into=c("Kingdom", "Phylum", "Class", "Order", "Genus","Species"), sep=";", extra="merge", drop=TRUE)
@@ -74,10 +74,10 @@ tax$Genus <- gsub("\\s*\\([^\\)]+\\)", "", tax$Genus)
 
 #NR - can't figure out how to do this for every column at once so just did Genus for now
 #JT - this does the gsub command on every column 
-apply(X = tax, MARGIN = 2, FUN = gsub, pattern = "\\s*\\([^\\)]+\\)", replace = "", tax$Genus)
+# apply(X = tax, MARGIN = 2, FUN = gsub, pattern = "\\s*\\([^\\)]+\\)", replace = "", tax$Genus)
 #
 
-tax[grep('Mitochondria', tax$Genus),]
+# tax[grep('Mitochondria', tax$Genus),]
 shared <- shared[,-grep('Mitochondria', tax$Genus)]
 shared <- shared[,-grep('Chloroplast', tax$Genus)]  #NR added this as well
 
@@ -105,12 +105,12 @@ share.rare <- share.rare[match(mastermeta$Group, rownames(share.rare)),]
 rownames(share.rare) == mastermeta$Group# this confirms that they are in the same order.
 
 share.rare2 <- share.rare # for boxplots later on
-write.table(mastermeta, 'FS1.mastermeta.txt', quote = FALSE, sep = '\t')
+# write.table(mastermeta, 'FS1.mastermeta.txt', quote = FALSE, sep = '\t')
 
-read.table('FS1.mastermeta.txt', header = TRUE)
+# read.table('FS1.mastermeta.txt', header = TRUE)
 ########## alpha diversity?  ##########
 
-rowSums(share.rare)
+# rowSums(share.rare)
 
 mastermeta$shannon <- diversity(share.rare)
 
@@ -131,7 +131,7 @@ mastermeta.feces <- mastermeta[mastermeta$tissue == 'Feces',]
 
 mastermeta.feces <- mastermeta.feces[mastermeta.feces$experiment == 'X1',]
 mastermeta.feces$set <- factor(mastermeta.feces$set)
-share.rare <- share.rare[rownames(share.rare) %in% mastermeta.feces$Group,] # this
+share.rare <- share.rare[rownames(share.rare) %in% mastermeta.feces$Group,] # this should be changed 
 rownames(share.rare) == mastermeta.feces$Group
 
 #group_numbers <- mastermeta.feces %>% group_by(set) %>% summarise(no_rows = length(set))
@@ -246,13 +246,13 @@ pen_res <- pen_comps %>% mutate(comparision=paste(room, 'A',' vs ', room, 'B', s
   select(day, comparision, F.Model, p.adjusted)
 
 # specify output folder
-write_csv(pen_res, 'pen_permanova.csv')
+# write_csv(pen_res, 'pen_permanova.csv')
 
 # after fdr adjusting pvalues in these comparisons, no sig diffs detected between pens
 
 #### checking for diffs in sow, pen, etc
 
-
+# this is for the main treatment effect?
 
 PWadon <- pairwise.adonis(share.rare, mastermeta.feces$set)
 
@@ -269,7 +269,7 @@ D14 <- grep("D14_Feces_.* vs D14_Feces_.*", PWadon$pairs)
 PWadon.good <- PWadon[c(D0, D4, D7, D11, D14),]
 
 # specify output folder
-write.table(PWadon.good, file = 'FS1_all_PERMANOVA.txt', quote = FALSE, row.names = FALSE, sep = '\t')
+write.table(PWadon.good, file = './output/FS1_all_PERMANOVA.txt', quote = FALSE, row.names = FALSE, sep = '\t')
 
 
 
@@ -281,7 +281,7 @@ time.control <- grep(".*_Feces_control vs .*_Feces_control", PWadon$pairs)
 PWadon.time <- PWadon[c(time.inj, time.control, time.oral),]
 
 # specify output folder
-write.table(PWadon.time, file = 'PWadonis.time', quote = FALSE, row.names = FALSE, sep = '\t')
+write.table(PWadon.time, file = './output/PWadonis.time', quote = FALSE, row.names = FALSE, sep = '\t')
 
 
 ################  Just plotting adonis Fval to control vs day  ##################
@@ -676,9 +676,9 @@ C7_ord <- ggplot(C7.metanmds, aes(x=MDS1, y=MDS2)) +  #annotate(x=feces.metanmds
 library(DESeq2)
 library(phyloseq)
 
-getwd()
-otu <- import_mothur(mothur_shared_file = 'FS1.V4.shared')
-taxo <- import_mothur(mothur_constaxonomy_file = 'FS1.V4.taxonomy')
+# getwd()
+otu <- import_mothur(mothur_shared_file = './data/FS1.V4.shared')
+taxo <- import_mothur(mothur_constaxonomy_file = './data/FS1.V4.taxonomy')
 
 #meta <- read.table(file = 'V4.metadata.txt', sep = '\t', header = TRUE)
 
@@ -872,7 +872,7 @@ colon_diff_OTUs <- colon_diff_OTUs %>% mutate(tissue='Colon',
 colon_diff_OTUs %>% group_by(day) %>% tally()
 
 
-c('Phylum', 'Class', 'Order', 'Family', 'Genus')
+# c('Phylum', 'Class', 'Order', 'Family', 'Genus')
 
 # feces gloms, all days
 ### ADDED Phylum class 4-25-19
@@ -989,10 +989,10 @@ master_difabund <- bind_rows(list(feces_diff_OTUs,
                                   colon_class,
                                   colon_phylum))
 
-write_csv(master_difabund, "master_diffabund_4-25-19.csv")
+write_csv(master_difabund, "./output/master_diffabund.csv")
 #
 #
-getwd()
+# getwd()
 #Figs you were looking for
 FS1.glom <- tax_glom(FS1, taxrank = "Order")
 
@@ -1023,7 +1023,7 @@ FS1.phylum <- tax_glom(FS1, 'Phylum')
 
 FS1.order <- tax_glom(FS1, 'Order')
 
-ntaxa(FS1.order)
+# ntaxa(FS1.order)
 
 
 phyla_tab <- as.data.frame(t(FS1.phylum@otu_table))
@@ -1091,22 +1091,40 @@ fobar.gather %>% filter(tissue == 'Feces' & day == 7) %>%
 
 
 ## Colon ##
+goods <- c("Bacteroidetes", "Firmicutes", "Proteobacteria", "Euryarchaeota", "Fibrobacteres","Actinobacteria" )
+library(ggsignif)
+
 
 fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
   filter(phylum %in% goods) %>% 
   ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
   geom_jitter(shape=21, width = .15)+
   facet_wrap(~phylum, scales = 'free')+
-  #geom_signif(comparisons = combn(levels(fobar.gather$treatment2), 2, simplify = F), 
-  #            map_signif_level = T)+
+  geom_signif(comparisons = combn(levels(fobar.gather$treatment2), 2, simplify = F), 
+              map_signif_level = T, test = 't.test')+
   ggtitle("Day 4: Colon") +
   scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
   ylab('Percent of Total Community') +
   xlab('')+ theme_bw()
 
+
+fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
+  filter(phylum %in% goods) %>% 
+  ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
+  geom_jitter(shape=21, width = .15)+
+  facet_wrap(~phylum, scales = 'free')+
+  geom_signif(map_signif_level = T, test = 't.test')+
+  ggtitle("Day 4: Colon") +
+  scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
+  ylab('Percent of Total Community') +
+  xlab('')+ theme_bw()
+
+
+
+
+
 unique(fobar.gather$phylum)
 
-goods <- c("Bacteroidetes", "Firmicutes", "Proteobacteria", "Euryarchaeota", "Fibrobacteres","Actinobacteria" )
 
 fobar.gather %>% filter(tissue == 'Colon' & day == 7) %>%
   filter(!(phylum %in% c('Synergistetes', 'Bacteria_unclassified'))) %>% 
@@ -1147,8 +1165,8 @@ phyla_t_tests <- fobar.gather %>%
   unnest() %>%
   mutate(p.value = round(p.value, 3))
 
-write_csv(phyla_t_tests, 'T_phyla_tests.csv')
-write_csv(phyla_tests, 'Wilcox_phyla_tests.csv')
+write_csv(phyla_t_tests, './output/T_phyla_tests.csv')
+write_csv(phyla_tests, './output/Wilcox_phyla_tests.csv')
 
 # 
 # fobar %>% mutate(B_F_ratio = Bacteroidetes/Firmicutes, 
