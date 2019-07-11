@@ -5,7 +5,7 @@
 
 
 getwd()
-setwd('~/FS1/reanal/')
+# setwd('~/FS1/reanal/')
 
 library(tidyverse)
 library(reshape2)
@@ -18,8 +18,8 @@ library(reshape2)
 # paste()
 
 
-tis <- read.csv('HansResults_tissues.csv', stringsAsFactors = FALSE)  # reads in data, already cleaned a little
-meta <- read.csv('hans_meta.csv', stringsAsFactors = FALSE)           # reads in some metadata
+tis <- read.csv('./data/HansResults_tissues.csv', stringsAsFactors = FALSE)  # reads in data, already cleaned a little
+meta <- read.csv('./data/hans_meta.csv', stringsAsFactors = FALSE)           # reads in some metadata
 
 inj <- meta$Pig.ID.Numbers[grep('IM', meta$Control.treatment)]        # creates a vector of pig numbers that have 'IM' in their treatment column
 oral <- meta$Pig.ID.Numbers[grep('In-feed', meta$Control.treatment)]    # creates a vector of pig numbers that have 'In-feed' in their treatment column
@@ -78,7 +78,8 @@ tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   geom_boxplot() +
   ylab('concentration ng/mL') + scale_y_log10() +
   facet_wrap(~Tissue, scales = 'free')+
-  theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))
+  theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF')) #+ 
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
 
 tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   #filter(Tissue %in% c('Feces', 'Plasma')) %>% 
@@ -87,7 +88,8 @@ tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   geom_boxplot() +
   ylab('concentration ng/mL') + scale_y_log10() +
   facet_wrap(~Tissue, scales = 'free')+
-  theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))
+  theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))+
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
 
 
 
@@ -102,7 +104,8 @@ tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   ylab('concentration ng/mL') + scale_y_log10() +
   facet_wrap(~Tissue, scales = 'free')+
   theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))+
-  scale_color_manual(values = c('#00BA38', '#619CFF'))
+  scale_color_manual(values = c('#00BA38', '#619CFF')) #+ 
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
 
 
 

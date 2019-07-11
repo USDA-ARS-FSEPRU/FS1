@@ -430,6 +430,111 @@ pldme_meanCTOG$Gene<-gsub("-", "_", pldme_meanCTOG$Gene)
 
 fecal_meanCTOG<-full_join(day7_meanCTOG, day14_meanCTOG, by = "Gene")
 all_meanCTOG<-full_join(fecal_meanCTOG, pldme_meanCTOG, by = "Gene")
-write.table(all_meanCTOG, file="FS1_meanCTOG.txt", sep="\t", row.names=FALSE, col.names=TRUE, quote=FALSE)
+# write.table(all_meanCTOG, file="FS1_meanCTOG.txt", sep="\t", row.names=FALSE, col.names=TRUE, quote=FALSE)
 #note that if we alter the N/A it messes up the decimals
 #if we want to use this we can add in standard deviation and adjust decimals?
+
+
+
+##### total ARG abundance regardless of treatment #######
+
+
+day7_fecal.metaQPCR <- day7_fecal.metaQPCR %>% select(1,Treatment,2,3, everything(), -2)
+
+day7_fecal.metaQPCR$Treatment <- ifelse(day7_fecal.metaQPCR$Treatment == 'Control', 'NM', 
+                                        ifelse(day7_fecal.metaQPCR$Treatment == 'In-Feed', 'Feed', 'Inject'))
+
+day7_fecal.metaQPCR$Treatment <- factor(day7_fecal.metaQPCR$Treatment, levels = c('NM', 'Inject', 'Feed'))
+
+
+D7_DCT <- day7_fecal.metaQPCR %>% mutate(Pignum = as.character(Pignum)) %>% 
+  mutate_if(is.numeric, function(x) x -.$`16Sold_1`) %>% select(-`16Sold_1`) %>% 
+  mutate_if(is.numeric, function(x) 1/x) %>%
+  gather(key='gene', value = 'value', -Pignum, -Treatment)
+
+
+
+day14_fecal.metaQPCR <- day14_fecal.metaQPCR %>% select(1,Treatment, everything())
+
+day14_fecal.metaQPCR$Treatment <- ifelse(day14_fecal.metaQPCR$Treatment == 'Control', 'NM', 
+                                         ifelse(day14_fecal.metaQPCR$Treatment == 'InFeed', 'Feed', 'Inject'))
+
+day14_fecal.metaQPCR$Treatment <- factor(day14_fecal.metaQPCR$Treatment, levels = c('NM', 'Inject', 'Feed'))
+
+
+
+D14_DCT <- day14_fecal.metaQPCR %>% mutate(Pignum = as.character(Pignum)) %>% 
+  mutate_if(is.numeric, function(x) x -.$`16Sold-1`) %>% select(-`16Sold-1`) %>% 
+  mutate_if(is.numeric, function(x) 1/x) %>%
+  gather(key='gene', value = 'value', -Pignum, -Treatment) 
+
+
+
+D7_DCT$day <- 7
+D14_DCT$day <- 14
+
+
+all_DCT <- rbind(D7_DCT, D14_DCT)
+
+
+all_DCT$gene <- gsub('-', '_', all_DCT$gene)
+
+all_DCT$gene <- gsub("'", '', all_DCT$gene)
+
+all_DCT$day <- as.character(all_DCT$day)
+
+unique(all_DCT$gene)
+
+all_DCT$day <- factor(all_DCT$day, levels = c('7','14'))
+all_DCT %>% 
+  ggplot(aes(x=gene, y=value)) +
+  geom_boxplot(aes(fill=day), outlier.colour = NA) +# geom_jitter(aes(color=Treatment), alpha=.3, width = .25)+
+  theme_bw() +
+  ylab("1/deltaCT") + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1)) + scale_fill_brewer(palette = 'Set3') + ylim(0,1)
+
+
+all_DCT %>% 
+  ggplot(aes(x=gene, y=value)) +
+  geom_boxplot(aes(fill=day), outlier.colour = NA) +# geom_jitter(aes(color=Treatment), alpha=.3, width = .25)+
+  theme_bw() +
+  ylab("1/deltaCT") + 
+  scale_fill_brewer(palette = 'Set3') + 
+  coord_flip() + ylim(0,1)
+
+
+
+
+all_DCT %>% 
+  ggplot(aes(x=gene, y=value)) +
+  geom_boxplot(aes(fill=day), outlier.colour = NA) +# geom_jitter(aes(color=Treatment), alpha=.3, width = .25)+
+  theme_bw() +
+  ylab("1/deltaCT") + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1)) + facet_wrap(~day)+ scale_fill_brewer(palette = 'Set3')
+
+
+
+all_DCT %>% group_by(gene, day) %>% summarise(`mean_1/DCT` = mean(value), 
+                                              `sd_1/DCT` = sd(value),
+                                              n=n(),
+                                              `se_1/DCT` = `sd_1/DCT`/n) %>% 
+  ggplot(aes(x=gene, y=`mean_1/DCT`, fill = day)) +
+  geom_col(position = position_dodge(preserve = 'single'), color='black') + 
+  geom_errorbar(aes(ymin=`mean_1/DCT`-`se_1/DCT`, ymax=`mean_1/DCT`+`se_1/DCT`),
+                position = position_dodge(preserve = 'single'))+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = 'Set3') + ylab('1 / delta CT')+ ylim(0,1)
+
+
+
+all_DCT %>% group_by(gene, day) %>% summarise(`mean_1/DCT` = mean(value), 
+                                              `sd_1/DCT` = sd(value),
+                                              n=n(),
+                                              `se_1/DCT` = `sd_1/DCT`/n) %>% 
+  arrange(day) %>% write_csv('./output/Total_ARG_table.csv')
+
+
+

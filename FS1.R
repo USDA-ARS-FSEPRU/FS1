@@ -1115,7 +1115,7 @@ fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
   facet_wrap(~phylum, scales = 'free')+
   geom_signif(map_signif_level = T, test = 't.test')+
   ggtitle("Day 4: Colon") +
-  scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
+  #scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
   ylab('Percent of Total Community') +
   xlab('')+ theme_bw()
 
@@ -1134,7 +1134,7 @@ fobar.gather %>% filter(tissue == 'Colon' & day == 7) %>%
   #geom_signif(comparisons = combn(levels(fobar.gather$treatment2), 2, simplify = F), 
   #            map_signif_level = F)+
   ggtitle("Day 7: Colon") +
-  scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
+  # scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
   ylab('Percent of Total Community') +
   xlab('')+ theme_bw()
 
