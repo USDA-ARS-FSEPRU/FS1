@@ -1,27 +1,21 @@
-#nr re-analysis of wafergen data so it is all combined and to include a limit of detection
-#note that day 7 and day 14 spreadsheets were formatted differently
-#also, there are shared pigs between day 7 and 14 therefore have to keep them separate
-#my initial plasmidome metadata sheet was missing two control pigs(due to bad sequence in lane 1) so had to redo the data with all pigs
-
-
 #install_github('Jtrachsel/funfuns')
 library(funfuns)
 library(tidyverse)
 library(ggplot2)
 
 # setwd("/Users/nicolericker/Documents/Pig experiments/FY2016/Wafergen samples")
-day7_fecal<-read.csv("wafergen_CTs.csv", header=TRUE, stringsAsFactors=FALSE)
+day7_fecal<-read.csv("./data/wafergen_CTs.csv", header=TRUE, stringsAsFactors=FALSE)
 #define a rep column and populate it with rep1 and rep2
 day7_fecal$rep<- sub('.*(Rep[1-2])', '\\1', day7_fecal$gene)
-head(day7_fecal$rep)
+# head(day7_fecal$rep)
 
 #now remove the rep from the original gene name
 day7_fecal$gene<-sub('(.*)_Rep[1-2]', '\\1', day7_fecal$gene)
-head(day7_fecal$gene)
+# head(day7_fecal$gene)
 
 #then order the data by gene to match reps
 day7_fecal <- day7_fecal[order(day7_fecal$gene),]
-head(day7_fecal$gene)
+# head(day7_fecal$gene)
 dim(day7_fecal)  #96 56
 #convert all cycles above 28 to NA and remove rows with NA all the way across
 day7_fecal[, 2:55][day7_fecal[,2:55] > 28] <-NA
@@ -41,8 +35,8 @@ day7_fecal.gather <- gather(day7_fecal, key=sample_ID, value=CT, starts_with('X'
                                       rep2=CT[2],
                                       numbad=sum(is.na(CT)),
                                       onegoodCT=ifelse(sum(is.na(CT))==1,CT[which(!is.na(CT))], NA))
-write.table(day7_fecal.gather, file="day7_fecal_gather.tsv", sep="\t", quote=FALSE, col.names=TRUE, row.names=FALSE)
-day14<-read.csv("Wafergen-March2018.csv", header=TRUE, stringsAsFactors=FALSE)
+# write.table(day7_fecal.gather, file="day7_fecal_gather.tsv", sep="\t", quote=FALSE, col.names=TRUE, row.names=FALSE)
+day14<-read.csv("./data/Wafergen-March2018.csv", header=TRUE, stringsAsFactors=FALSE)
 #note this has day14 fecals and day7 plasmidome data
 
 #parse out just the assay, sample and Ct values then mutate to include the reps
@@ -53,7 +47,7 @@ day14$Rep=parse_number(day14$Rep)
 #now we need to remove the Rep information from the gene name
 day14 <- separate(day14, Assay, into=c("Gene", "Primer"), extra = "drop", sep="_", fill="warn", remove=TRUE)
 day14 <- unite(day14, Genes, Gene, Primer, sep="-", remove=TRUE)
-head(day14)
+# head(day14)
 #it would appear that the ermA genes had "-" instead of "_" for their Rep
 unique(day14$Genes)
 day14$Genes <- sub("-Rep[1-2]", "", day14$Genes)
@@ -95,7 +89,7 @@ day14_fecal.gather <- gather(day14_fecal_one16S, key=sample_ID, value=CT, starts
                                       rep2=CT[2],
                                       numgood=sum(!is.na(CT)),
                                       onegoodCT=ifelse(numgood==1,CT[which(!is.na(CT))], NA))
-write.table(day14_fecal.gather, file="day14_fecal_gather.tsv", sep="\t", quote=FALSE, col.names=TRUE, row.names=FALSE)
+# write.table(day14_fecal.gather, file="day14_fecal_gather.tsv", sep="\t", quote=FALSE, col.names=TRUE, row.names=FALSE)
 #now for the plasmidome samples (which are from day 7 also and DNase treated but NOT genomiphi'd)
 #First order by gene to match reps
 #then order the data by gene to match reps
@@ -123,7 +117,7 @@ pldme.gather <- gather(pldme_one16S, key=sample_ID, value=CT, ends_with('o')) %>
                                       rep2=CT[2],
                                       numgood=sum(!is.na(CT)),
                                       onegoodCT=ifelse(numgood==1,CT[which(!is.na(CT))], NA))
-write.table(pldme.gather, file="pldme.gather.tsv", sep="\t", quote=FALSE, col.names=TRUE, row.names=FALSE)
+# write.table(pldme.gather, file="pldme.gather.tsv", sep="\t", quote=FALSE, col.names=TRUE, row.names=FALSE)
 
 #substitute in the one good CT if there isn't a second one
 #remember that ifelse has three details 1) the condition, 2) if yes, 3) if no
@@ -158,29 +152,28 @@ pldme.goods.spread <- pldme.goods %>% select(gene, Pignum, meanCTOG) %>% spread(
 #bringing in the metadata - this has to be done separately for each run
 #bringing in the metadata
 unique(day7_fecal.goods.spread$Pignum)
-FS1mettt<-read.csv('FS1.qprc.meta.csv', stringsAsFactors=FALSE) 
+FS1mettt<-read.csv('./data/FS1.qprc.meta.csv', stringsAsFactors=FALSE) 
 colnames(FS1mettt)<-c("Pignum", "Treatment")
 day7_fecal.metaQPCR<- merge(day7_fecal.goods.spread, FS1mettt, by = 'Pignum')
-write.table(day7_fecal.metaQPCR, file="day7_fecals_good_with_metadata.txt", quote=FALSE, sep="\t", row.names=FALSE, col.names=TRUE)
+# write.table(day7_fecal.metaQPCR, file="day7_fecals_good_with_metadata.txt", quote=FALSE, sep="\t", row.names=FALSE, col.names=TRUE)
 
 FS1mettt$Pignum
 pldme.goods.spread$Pignum<-sub("P","",pldme.goods.spread$Pignum)
 pldme.goods.spread$Pignum<-as.character(pldme.goods.spread$Pignum)
 pldme.metaQPCR<-merge(pldme.goods.spread, FS1mettt, by = "Pignum")
 pldme.metaQPCR$Pignum
-write.table(pldme.metaQPCR, file="day7_plasmidome_good_with_metadata.txt", quote=FALSE, sep="\t", row.names=FALSE, col.names=TRUE)
+# write.table(pldme.metaQPCR, file="day7_plasmidome_good_with_metadata.txt", quote=FALSE, sep="\t", row.names=FALSE, col.names=TRUE)
 dim(pldme.metaQPCR)  #20 38 - different than when first analyzed?  20 is the right number....
 #when I analyzed the first time I used the metadata sheet without pig 22 and 25 (those two were problematic in the plasmidome sequencing) 
 #however looking at the pldme.metaQPCR file it is clear that they have amplified consistent with the others
 
-#analyzed a third time and got 20 32????
 # View(pldme.metaQPCR)
 
-d14_metadata<-read.csv('day14_metadata.csv', stringsAsFactors=FALSE) 
+d14_metadata<-read.csv('./data/day14_metadata.csv', stringsAsFactors=FALSE) 
 day14_fecal.metaQPCR<- merge(day14_fecal.goods.spread, d14_metadata, by = 'Pignum')
 day14_fecal.metaQPCR$Pignum<-as.character(day14_fecal.metaQPCR$Pignum)
 # View(day14_fecal.metaQPCR)
-write.table(day14_fecal.metaQPCR, file="day14_fecals_good_with_metadata.txt", quote=FALSE, sep="\t", row.names=FALSE, col.names=TRUE)
+# write.table(day14_fecal.metaQPCR, file="day14_fecals_good_with_metadata.txt", quote=FALSE, sep="\t", row.names=FALSE, col.names=TRUE)
 
 #still keeping them all separate so that there's no confusion - may combine later
 
