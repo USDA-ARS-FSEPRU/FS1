@@ -54,7 +54,7 @@ tis.melt$day <- factor(tis.melt$day)                                     # makes
 
 # this section uses tidyverse type pipes, filters, and ggplot to produce boxplots
 
-tis.melt$concentration[tis.melt$concentration == 0] <- 1
+# tis.melt$concentration[tis.melt$concentration == 0] <- 1
 tis.melt$Treatment <- ifelse(tis.melt$treatment == 'control', 'NM', 
                              ifelse(tis.melt$treatment == 'inject', 'Inject', 
                                     ifelse(tis.melt$treatment == 'oral', 'Feed', NA)))
@@ -77,15 +77,15 @@ tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   facet_wrap(~Tissue, scales = 'free')+
   theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))
 
-tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
-  #filter(Tissue %in% c('Feces', 'Plasma')) %>% 
-  filter(day != 0) %>% 
-  ggplot(aes(x=day, y=concentration, group=dayXtreat, fill=Treatment)) +
-  geom_boxplot() +
-  ylab('concentration ng/mL') + scale_y_log10() +
-  facet_wrap(~Tissue, scales = 'free')+
-  theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))+
-  scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+# tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
+#   #filter(Tissue %in% c('Feces', 'Plasma')) %>% 
+#   filter(day != 0) %>% 
+#   ggplot(aes(x=day, y=concentration, group=dayXtreat, fill=Treatment)) +
+#   geom_boxplot() +
+#   ylab('concentration ng/mL') + scale_y_log10() +
+#   facet_wrap(~Tissue, scales = 'free')+
+#   theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))+
+#   scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
 
 
 
@@ -101,7 +101,7 @@ tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   facet_wrap(~Tissue, scales = 'free')+
   theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))+
   scale_color_manual(values = c('#00BA38', '#619CFF')) #+ 
-  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+  # scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
 
 
 
@@ -129,11 +129,11 @@ tis.melt %>% filter(tissue %in% c('Serum', 'feces')) %>%
 
 
 
-tis.melt %>% group_by(Treatment, day) %>% 
-  summarise(mean_conc = mean(concentration)) %>% 
-  spread(key=Treatment, value=mean_conc, -day)
+# tis.melt %>% group_by(Treatment, day) %>% 
+#   summarise(mean_conc = mean(concentration)) %>% 
+#   spread(key=Treatment, value=mean_conc, -day)
 
-scales::trans_new(transform = log2, inverse = exp)
+# scales::trans_new(transform = log2, inverse = exp)
 
 tis.melt %>% filter(tissue == 'Serum') %>%                                 
   ggplot(aes(x=day, y=concentration, group=dayXtreat, fill=treatment)) +
@@ -176,8 +176,10 @@ feces.abx <- tis.melt %>% filter(tissue == 'feces')
 #tis.spread <- spread(tis.melt, key = tissue, value = concentration)
 
 
-check <- tis.melt %>% group_by(day, tissue, Treatment) %>% summarise(mean=mean(concentration), 
-                                                            n=n())
+tis.melt %>% group_by(day, tissue, Treatment) %>% summarise(mean=mean(concentration), 
+                                                            n=n(), 
+                                                            sd=sd(concentration), 
+                                                            se=sd/n) %>% write_csv('./output/mean_abx_conc.csv')
 
 tis.melt[c(381,514),]
 tis.melt[c(20,249),]
