@@ -1,10 +1,9 @@
-# getwd()
-# setwd('~/FS1/Helping_Nicole/')
-
 library(tidyverse)
 library(vegan)
 library(funfuns) 
-# library(cowplot)
+
+
+set.seed(2829475)
 
 ####### Metadata extraction from sample names #######
 # WRITE METADATA OUT AND READ IN TO AVOID THIS SECTION #

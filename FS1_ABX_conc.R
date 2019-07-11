@@ -66,9 +66,6 @@ tis.melt$Tissue <- ifelse(tis.melt$tissue == 'Serum', 'Plasma',
 
 
 
-
-
-
 tis.melt$Treatment <- factor(tis.melt$Treatment, levels = c('NM', 'Inject', 'Feed'))
 
 tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
@@ -76,10 +73,9 @@ tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   filter(day != 0) %>% 
   ggplot(aes(x=day, y=concentration, group=dayXtreat, fill=Treatment)) +
   geom_boxplot() +
-  ylab('concentration ng/mL') + scale_y_log10() +
+  ylab('Concentration of Oxytetracycline (ng/mL)') + xlab('Day') + scale_y_log10(labels=scales::scientific) +
   facet_wrap(~Tissue, scales = 'free')+
-  theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF')) #+ 
-  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+  theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))
 
 tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   #filter(Tissue %in% c('Feces', 'Plasma')) %>% 
@@ -178,6 +174,10 @@ feces.abx <- tis.melt %>% filter(tissue == 'feces')
 
 
 #tis.spread <- spread(tis.melt, key = tissue, value = concentration)
+
+
+check <- tis.melt %>% group_by(day, tissue, Treatment) %>% summarise(mean=mean(concentration), 
+                                                            n=n())
 
 tis.melt[c(381,514),]
 tis.melt[c(20,249),]
