@@ -176,10 +176,13 @@ feces.abx <- tis.melt %>% filter(tissue == 'feces')
 #tis.spread <- spread(tis.melt, key = tissue, value = concentration)
 
 
-tis.melt %>% group_by(day, tissue, Treatment) %>% summarise(mean=mean(concentration), 
+tmp <- tis.melt %>% group_by(day, tissue, Treatment) %>% summarise(mean=mean(concentration), 
                                                             n=n(), 
                                                             sd=sd(concentration), 
                                                             se=sd/n) %>% write_csv('./output/mean_abx_conc.csv')
+
+
+table_S2b <- tmp %>% filter(tissue %in% c('feces', 'Ileum')) %>% arrange(tissue) %>% write_csv('./output/Table_S2b.csv')
 
 tis.melt[c(381,514),]
 tis.melt[c(20,249),]
@@ -192,3 +195,18 @@ tis.melt[c(381),]$pig <- 5
 tis.melt[c(20),]$pig <- 5
 tis.melt[c(718),]$pig <- 50
 tis.melt[c(719),]$pig <- 50
+
+
+colnames(meta)[1] <- 'pig'
+colnames(meta)[6] <- 'Weight'
+
+
+tis.meta <- tis.melt %>% left_join(meta)
+tis.meta$Weight <- as.numeric(tis.meta$Weight)
+
+tis.meta %>% filter(day==1) %>%
+  ggplot(aes(x=Weight, y=concentration, color=Treatment)) +
+  geom_smooth(method = 'lm') + geom_point() + theme_bw() +ylab('Concentration of Oxytetracycline (ng/mL)') + xlab("Weight (kg)")
+
+
+
