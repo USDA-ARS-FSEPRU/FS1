@@ -66,7 +66,9 @@ shared <- shared[rownames(shared) %in% rownames(mastermeta),]
 tax<-read.table("./data/FS1.V4.taxonomy", header = TRUE, stringsAsFactors = FALSE, sep="\t")  #added by NR because it seems to be missing
 colnames(tax)
 library(tidyverse)
-tax <- tax %>% separate(Taxonomy, into=c("Kingdom", "Phylum", "Class", "Order", "Genus","Species"), sep=";", extra="merge", drop=TRUE)
+
+# this has changed....
+tax <- tax %>% separate(Taxonomy, into=c("Kingdom", "Phylum", "Class", "Order", "Genus","Species"), sep=";", extra="merge", remove=TRUE)
 #still NR - need to get rid of the numbers following each assignment
 tax$Genus <- gsub("\\s*\\([^\\)]+\\)", "", tax$Genus)
 
@@ -253,7 +255,7 @@ pen_res <- pen_comps %>% mutate(comparision=paste(room, 'A',' vs ', room, 'B', s
 
 # this is for the main treatment effect?
 
-PWadon <- pairwise.adonis(share.rare, mastermeta.feces$set)
+PWadon <- pairwise.adonis(share.rare, mastermeta.feces$set, permutations = 999)
 
 
 
@@ -267,6 +269,8 @@ D14 <- grep("D14_Feces_.* vs D14_Feces_.*", PWadon$pairs)
 
 PWadon.good <- PWadon[c(D0, D4, D7, D11, D14),]
 
+PWadon.good$p.adjusted <- signif(p.adjust(PWadon.good$p.value, method = 'fdr'), digits = 3)
+
 # specify output folder
 write.table(PWadon.good, file = './output/FS1_all_PERMANOVA.txt', quote = FALSE, row.names = FALSE, sep = '\t')
 
@@ -278,6 +282,8 @@ time.oral <- grep(".*_Feces_oral vs .*_Feces_oral", PWadon$pairs)
 time.control <- grep(".*_Feces_control vs .*_Feces_control", PWadon$pairs)
 
 PWadon.time <- PWadon[c(time.inj, time.control, time.oral),]
+
+PWadon.time$p.adjusted <- signif(p.adjust(PWadon.time$p.value, method = 'fdr'), digits = 3)
 
 # specify output folder
 write.table(PWadon.time, file = './output/PWadonis.time', quote = FALSE, row.names = FALSE, sep = '\t')
@@ -292,11 +298,14 @@ PWadon.tocont$group <- gsub('D[0-9]+_Feces_control vs (D[0-9]+_Feces_[A-Za-z]+)'
 #PWadon.tocont <- PWadon.tocont[order(as.numeric(PWadon.tocont$day)),]
 PWadon.tocont$day <- factor(PWadon.tocont$day, levels = c('0', '4', '7','11', '14'))
 
+
+PWadon.tocont$p.adjusted <- round(p.adjust(PWadon.tocont$p.value, method = 'fdr'), 3)
+
 p2 <- ggplot(PWadon.tocont, aes(x=day, y=F.Model, color=treatment)) +
   geom_path(aes(group=treatment), size=1.3, show.legend = FALSE) + 
   scale_fill_manual(values = c('#00BA38', '#619CFF')) + 
   geom_vline(xintercept = 3, color='purple', size = 1, alpha=.75) +
-  geom_label(aes(label=p.value, fill=treatment), color='black', show.legend = FALSE) +
+  geom_label(aes(label=p.adjusted, fill=treatment), color='black', show.legend = FALSE) +
   scale_color_manual(values = c('#00BA38', '#619CFF'), labels = c('Inject', 'Feed'), name='Treatment')+
   ylab('PERMANOVA F vs NM') + theme_bw()
 p2 
@@ -544,13 +553,14 @@ mastermeta$Group == rownames(share.rare2)
 rownames(share.rare.tissue) == rownames(mastermeta.tissue)
 
 #share.rare.tissue[1:10,1:10]
-
+set.seed(4)
 PWadon2 <- pairwise.adonis(share.rare.tissue, mastermeta.tissue$set)
 
 colonVScolon <- grep(".*_Colon_.* vs .*_Colon_.*", PWadon2$pairs)
 ileumVSileum <- grep(".*_Ileum_.* vs .*_Ileum_.*", PWadon2$pairs)
 
-goodones <- c(colonVScolon, ileumVSileum)
+# goodones <- c(colonVScolon, ileumVSileum)
+goodones <- c(colonVScolon)
 PWadon.tissue <- PWadon2[goodones,]
 
 D4t <- grep("D4_.*_.* vs D4_.*_.*", PWadon.tissue$pairs)
@@ -568,18 +578,18 @@ PWadon.tocont$treatment <- gsub('D[0-9]+_[A-Za-z]+_control vs D[0-9]+_[A-Za-z]+_
 PWadon.tocont$group <- gsub('D[0-9]+_[A-Za-z]+_control vs (D[0-9]+_[A-Za-z]+_[A-Za-z]+)', '\\1', PWadon.tocont$pairs)
 #PWadon.tocont <- PWadon.tocont[order(as.numeric(PWadon.tocont$day)),]
 PWadon.tocont$day <- factor(PWadon.tocont$day, levels = c('4', '7', '14'))
-
+PWadon.tocont$p.adjusted <- round(p.adjust(PWadon.tocont$p.value, method = 'fdr'), 3)
 PWadon.tocont$group
 
 
 PWadon.tocont.colon <- PWadon.tocont[grep('Colon', PWadon.tocont$group),]
-PWadon.tocont.ileum <- PWadon.tocont[grep('Ileum', PWadon.tocont$group),]
+# PWadon.tocont.ileum <- PWadon.tocont[grep('Ileum', PWadon.tocont$group),]
 
 p3 <- ggplot(PWadon.tocont.colon, aes(x=day, y=F.Model, color=treatment)) +
   geom_path(aes(group=treatment), size=1.3) + 
   scale_fill_manual(values = c('#00BA38', '#619CFF')) + 
   geom_vline(xintercept = 2, color='purple', size = 1, alpha=.75) +
-  geom_label(aes(label=p.value, fill=treatment), color='black', show.legend = FALSE) +
+  geom_label(aes(label=p.adjusted, fill=treatment), color='black', show.legend = FALSE) +
   scale_color_manual(values = c('#00BA38', '#619CFF'), labels=c('Inject', 'Feed')) +
   ylim(1,2.5)+ #ggtitle('PERMANOVA comparisions to Control group', subtitle = 'Colon') + 
   ylab('PERMANOVA F vs NM') + theme_bw()
@@ -1151,7 +1161,7 @@ phyla_tests <- fobar.gather %>%
   mutate(tests = map(data, ~ pairwise.wilcox.test(x=.x$percent_tot, g=.x$treatment2, data=.x, p.adjust.method = 'none'))) %>% 
   mutate(tests_tidy = map(tests, broom::tidy)) %>%
   select(day, tissue, phylum, tests_tidy) %>%
-  unnest() %>%
+  unnest() #%>%
   mutate(p.value = round(p.value, 3))
 
 
@@ -1161,11 +1171,15 @@ phyla_t_tests <- fobar.gather %>%
   mutate(tests = map(data, ~ pairwise.t.test(x=.x$percent_tot, g=.x$treatment2, data=.x, p.adjust.method = 'none'))) %>% 
   mutate(tests_tidy = map(tests, broom::tidy)) %>%
   select(day, tissue, phylum, tests_tidy) %>%
-  unnest() %>%
+  unnest() #%>%
   mutate(p.value = round(p.value, 3))
 
+  
+  
 write_csv(phyla_t_tests, './output/T_phyla_tests.csv')
 write_csv(phyla_tests, './output/Wilcox_phyla_tests.csv')
+
+
 
 # 
 # fobar %>% mutate(B_F_ratio = Bacteroidetes/Firmicutes, 

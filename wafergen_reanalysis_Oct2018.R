@@ -243,18 +243,51 @@ pldme.ddct.gather %>% ggplot(aes(x=Treatment, y=response, group=Treatment, fill=
   ggtitle('Day 7 Plasmidome DeltaDelta CT relative to control mean')
 
 #can I do a group_by and get mean and sd for each gene by treatment.. no b/c can't figure it out!
-day7_fecal.metaQPCR %>% group_by(Treatment) %>% summary()
+# day7_fecal.metaQPCR %>% group_by(Treatment) %>% summary()
 #write.table(day7_fecal.metaQPCR, file="day7_fecal.metaQPCR", sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
 #now to determine significant ones and plot those
 
+
+
+#########
+# this is proably a better way to do things.
+library(broom)
+
+d7_fecal_tests <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% 
+  mutate(AOV = map(data, ~ aov(data=. , formula = response ~ Treatment)), 
+         summ = map(AOV, tidy), 
+         tuk = map(AOV, TukeyHSD), 
+         tid_tuk = map(tuk, tidy)) %>% 
+  select(gene, tid_tuk) %>% 
+  unnest(cols = c(tid_tuk)) %>% 
+  ungroup() %>% 
+  mutate(tuk_pvalue=adj.p.value, 
+         fdr.adj.pval = p.adjust(adj.p.value, method = 'fdr')) %>% 
+  select(gene, term, comparison, estimate, conf.low, conf.high, tuk_pvalue, fdr.adj.pval)
+
+
+write_csv(d7_fecal_tests, path = './output/D7_qpcr_test.csv')
+
+d7_fecal_tests %>% filter(fdr.adj.pval < 0.05) %>% write_csv('./output/D7_qpcr_sigs.csv')
+
+
+d7_fecal_tests %>% filter(tuk_pvalue < 0.05)
+
+
+
+
 #Jules' helper function for outputing pairwise.wilcox.test pvalues for each gene
 get_pairs <- function(df){
-  pp <- pairwise.wilcox.test(df$response, df$Treatment)
+  pp <- pairwise.wilcox.test(df$response, df$Treatment, p.adjust.method = 'none')
   ppdf <- as.data.frame(pp$p.value)
   ps <- data.frame(matrix(c(pp$p.value), nrow = 1))
   names(ps) <-paste(c(rep(names(ppdf), each = nrow(ppdf))), "_vs_", rep(rownames(ppdf), ncol(ppdf)), sep = "")
   ps
 }
+
+
+
+
 
 colnames(day7_fecal.ddct.gather)
 day7_fecal.PW_wilc_per_gene <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs)) %>%
@@ -262,6 +295,9 @@ day7_fecal.PW_wilc_per_gene <- day7_fecal.ddct.gather %>% group_by(gene) %>% nes
 colnames(day7_fecal.PW_wilc_per_gene)
 range(day7_fecal.PW_wilc_per_gene$`Control_vs_In-Feed`)
 colnames(day7_fecal.PW_wilc_per_gene)[3]<-"Control_vs_Feed"
+
+
+
 day7_fecal.sigs_feed <- day7_fecal.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.05)
 day7_fecal.sig_inject <- day7_fecal.PW_wilc_per_gene %>% filter(Control_vs_Inject < 0.05)
 
@@ -292,18 +328,30 @@ D14_wilc <- c(day14_fecal.sigs_feed$gene, day14_fecal.sig_inject$gene)
 # 
 #modifying Jules' function to do a t-test instead of wilcox
 get_paired_t <- function(df){
-  pp <- pairwise.t.test(df$response, df$Treatment, p.adjust.method="fdr")
+  pp <- pairwise.t.test(df$response, df$Treatment, p.adjust.method="none")
   ppdf <- as.data.frame(pp$p.value)
   ps <- data.frame(matrix(c(pp$p.value), nrow = 1))
   names(ps) <-paste(c(rep(names(ppdf), each = nrow(ppdf))), "_vs_", rep(rownames(ppdf), ncol(ppdf)), sep = "")
   ps
 }
-bonferroni_day7_fecal.PW_ttest_per_gene <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_paired_t)) %>%
-  select(gene, pps) %>% unnest()
-bonferroni_day14_fecal.PW_ttest_per_gene <- day14_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_paired_t)) %>%
-  select(gene, pps) %>% unnest()
-bonferroni_pldme.PW_ttest_per_gene <- pldme.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_paired_t)) %>%
-  select(gene, pps) %>% unnest()
+bonferroni_day7_fecal.PW_ttest_per_gene <- day7_fecal.ddct.gather %>%
+  group_by(gene) %>%
+  nest() %>%
+  mutate(pps = map(data, get_paired_t)) %>%
+  select(gene, pps) %>%
+  unnest()
+
+bonferroni_day14_fecal.PW_ttest_per_gene <- day14_fecal.ddct.gather %>%
+  group_by(gene) %>%
+  nest() %>%
+  mutate(pps = map(data, get_paired_t)) %>%
+  select(gene, pps) %>%
+  unnest()
+
+# bonferroni_pldme.PW_ttest_per_gene <- pldme.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_paired_t)) %>%
+#   select(gene, pps) %>% unnest()
+# 
+
 
 colnames(bonferroni_day7_fecal.PW_ttest_per_gene)[3]<-"Control_vs_Feed"
 sig.day7.fecal.PW.ttest <- subset(bonferroni_day7_fecal.PW_ttest_per_gene, Control_vs_Inject < 0.05 | Control_vs_Feed < 0.05)
