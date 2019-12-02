@@ -273,7 +273,30 @@ d7_fecal_tests %>% filter(fdr.adj.pval < 0.05) %>% write_csv('./output/D7_qpcr_s
 
 d7_fecal_tests %>% filter(tuk_pvalue < 0.05)
 
+######### D14 tests ##########
 
+d14_fecal_tests <- day14_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% 
+  mutate(AOV = map(data, ~ aov(data=. , formula = response ~ Treatment)), 
+         summ = map(AOV, tidy), 
+         tuk = map(AOV, TukeyHSD), 
+         tid_tuk = map(tuk, tidy)) %>% 
+  select(gene, tid_tuk) %>% 
+  unnest(cols = c(tid_tuk)) %>% 
+  ungroup() %>% 
+  mutate(tuk_pvalue=adj.p.value, 
+         fdr.adj.pval = p.adjust(adj.p.value, method = 'fdr')) %>% 
+  select(gene, term, comparison, estimate, conf.low, conf.high, tuk_pvalue, fdr.adj.pval)
+
+
+write_csv(d14_fecal_tests, path = './output/D14_qpcr_test.csv')
+
+# d14_fecal_tests %>% filter(fdr.adj.pval < 0.05) %>% write_csv('./output/D14_qpcr_sigs.csv')
+
+
+d14_fecal_tests %>% filter(tuk_pvalue < 0.05)
+
+
+#########################
 
 
 #Jules' helper function for outputing pairwise.wilcox.test pvalues for each gene
