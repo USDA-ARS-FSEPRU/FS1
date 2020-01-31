@@ -1,7 +1,9 @@
 #install_github('Jtrachsel/funfuns')
 library(funfuns)
 library(tidyverse)
-library(ggplot2)
+library(broom)
+
+
 
 # setwd("/Users/nicolericker/Documents/Pig experiments/FY2016/Wafergen samples")
 day7_fecal<-read.csv("./data/wafergen_CTs.csv", header=TRUE, stringsAsFactors=FALSE)
@@ -41,7 +43,7 @@ day14<-read.csv("./data/Wafergen-March2018.csv", header=TRUE, stringsAsFactors=F
 
 #parse out just the assay, sample and Ct values then mutate to include the reps
 day14 <- day14[,c(3,4,6)]
-library(stringr)  
+
 day14$Rep <- str_sub(day14$Assay, -4)
 day14$Rep=parse_number(day14$Rep)
 #now we need to remove the Rep information from the gene name
@@ -249,10 +251,9 @@ pldme.ddct.gather %>% ggplot(aes(x=Treatment, y=response, group=Treatment, fill=
 
 
 
-#########
+#### Jules addition #########
 # this is proably a better way to do things.
-library(broom)
-
+# Anova and tukey for each gene
 d7_fecal_tests <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% 
   mutate(AOV = map(data, ~ aov(data=. , formula = response ~ Treatment)), 
          summ = map(AOV, tidy), 
@@ -268,10 +269,10 @@ d7_fecal_tests <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>%
 
 write_csv(d7_fecal_tests, path = './output/D7_qpcr_test.csv')
 
-d7_fecal_tests %>% filter(fdr.adj.pval < 0.05) %>% write_csv('./output/D7_qpcr_sigs.csv')
+# D7 SIGS HERE
+sig_day7 <- d7_fecal_tests %>% filter(fdr.adj.pval < 0.05) %>% write_csv('./output/D7_qpcr_sigs.csv')
 
-
-d7_fecal_tests %>% filter(tuk_pvalue < 0.05)
+# d7_fecal_tests %>% filter(tuk_pvalue < 0.05)
 
 ######### D14 tests ##########
 
@@ -300,104 +301,100 @@ d14_fecal_tests %>% filter(tuk_pvalue < 0.05)
 
 
 #Jules' helper function for outputing pairwise.wilcox.test pvalues for each gene
-get_pairs <- function(df){
-  pp <- pairwise.wilcox.test(df$response, df$Treatment, p.adjust.method = 'none')
-  ppdf <- as.data.frame(pp$p.value)
-  ps <- data.frame(matrix(c(pp$p.value), nrow = 1))
-  names(ps) <-paste(c(rep(names(ppdf), each = nrow(ppdf))), "_vs_", rep(rownames(ppdf), ncol(ppdf)), sep = "")
-  ps
-}
-
-
-
-
-
-colnames(day7_fecal.ddct.gather)
-day7_fecal.PW_wilc_per_gene <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs)) %>%
-  select(gene, pps) %>% unnest()
-colnames(day7_fecal.PW_wilc_per_gene)
-range(day7_fecal.PW_wilc_per_gene$`Control_vs_In-Feed`)
-colnames(day7_fecal.PW_wilc_per_gene)[3]<-"Control_vs_Feed"
-
-
-
-day7_fecal.sigs_feed <- day7_fecal.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.05)
-day7_fecal.sig_inject <- day7_fecal.PW_wilc_per_gene %>% filter(Control_vs_Inject < 0.05)
-
-D7_wilc <- c(day7_fecal.sigs_feed$gene, day7_fecal.sig_inject$gene)
-
-day14_fecal.PW_wilc_per_gene <- day14_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs)) %>%
-  select(gene, pps) %>% unnest()
-colnames(day14_fecal.PW_wilc_per_gene)
-range(day14_fecal.PW_wilc_per_gene$`Control_vs_InFeed`)
-colnames(day14_fecal.PW_wilc_per_gene)[3]<-"Control_vs_Feed"
-day14_fecal.sigs_feed <- day14_fecal.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.05)
-day14_fecal.sig_inject <- day14_fecal.PW_wilc_per_gene %>% filter(Control_vs_Inject < 0.05)
-day14_marginal_feed<-day14_fecal.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.1)
-
-D14_wilc <- c(day14_fecal.sigs_feed$gene, day14_fecal.sig_inject$gene)
-
-# pldme.PW_wilc_per_gene <- pldme.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs)) %>%
-#   select(gene, pps) %>% unnest()
-# colnames(pldme.PW_wilc_per_gene)
-# range(pldme.PW_wilc_per_gene$`Control_vs_In-Feed`)
-# colnames(pldme.PW_wilc_per_gene)[3]<-"Control_vs_Feed"
-# pldme.marg_sigs_feed <- pldme.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.1)
-# pldme.marg_sig_inject <- pldme.PW_wilc_per_gene %>% filter(Control_vs_Inject < 0.1)
-# #note that aph and intI3 are no longer significant with the addition of the two control pigs that were missed the first time
-# write.table(pldme_ddct, file="Plasmidome_ddct.txt", sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-# write.table(day7_fecal_ddct, file="Day7_fecal_ddct.txt", sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
-# #not redoing the other figures since Jules' is going to add the LOD lines on them
-# 
-#modifying Jules' function to do a t-test instead of wilcox
-get_paired_t <- function(df){
-  pp <- pairwise.t.test(df$response, df$Treatment, p.adjust.method="none")
-  ppdf <- as.data.frame(pp$p.value)
-  ps <- data.frame(matrix(c(pp$p.value), nrow = 1))
-  names(ps) <-paste(c(rep(names(ppdf), each = nrow(ppdf))), "_vs_", rep(rownames(ppdf), ncol(ppdf)), sep = "")
-  ps
-}
-bonferroni_day7_fecal.PW_ttest_per_gene <- day7_fecal.ddct.gather %>%
-  group_by(gene) %>%
-  nest() %>%
-  mutate(pps = map(data, get_paired_t)) %>%
-  select(gene, pps) %>%
-  unnest()
-
-bonferroni_day14_fecal.PW_ttest_per_gene <- day14_fecal.ddct.gather %>%
-  group_by(gene) %>%
-  nest() %>%
-  mutate(pps = map(data, get_paired_t)) %>%
-  select(gene, pps) %>%
-  unnest()
-
-# bonferroni_pldme.PW_ttest_per_gene <- pldme.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_paired_t)) %>%
-#   select(gene, pps) %>% unnest()
+# get_pairs <- function(df){
+#   pp <- pairwise.wilcox.test(df$response, df$Treatment, p.adjust.method = 'none')
+#   ppdf <- as.data.frame(pp$p.value)
+#   ps <- data.frame(matrix(c(pp$p.value), nrow = 1))
+#   names(ps) <-paste(c(rep(names(ppdf), each = nrow(ppdf))), "_vs_", rep(rownames(ppdf), ncol(ppdf)), sep = "")
+#   ps
+# }
 # 
 
 
-colnames(bonferroni_day7_fecal.PW_ttest_per_gene)[3]<-"Control_vs_Feed"
-sig.day7.fecal.PW.ttest <- subset(bonferroni_day7_fecal.PW_ttest_per_gene, Control_vs_Inject < 0.05 | Control_vs_Feed < 0.05)
 
-colnames(bonferroni_day14_fecal.PW_ttest_per_gene)[3]<-"Control_vs_Feed"
-sig.day14.fecal.PW.ttest <- subset(bonferroni_day14_fecal.PW_ttest_per_gene, Control_vs_Inject < 0.05 | Control_vs_Feed < 0.05)
-
-# colnames(bonferroni_pldme.PW_ttest_per_gene)[3]<-"Control_vs_Feed"
-# sig.pldme.PW.ttest <- subset(bonferroni_pldme.PW_ttest_per_gene, Control_vs_Inject < 0.05 | Control_vs_Feed < 0.05)
+# 
+# colnames(day7_fecal.ddct.gather)
+# day7_fecal.PW_wilc_per_gene <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs)) %>%
+#   select(gene, pps) %>% unnest()
+# colnames(day7_fecal.PW_wilc_per_gene)
+# range(day7_fecal.PW_wilc_per_gene$`Control_vs_In-Feed`)
+# colnames(day7_fecal.PW_wilc_per_gene)[3]<-"Control_vs_Feed"
+# 
+# 
+# 
+# day7_fecal.sigs_feed <- day7_fecal.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.05)
+# day7_fecal.sig_inject <- day7_fecal.PW_wilc_per_gene %>% filter(Control_vs_Inject < 0.05)
+# 
+# D7_wilc <- c(day7_fecal.sigs_feed$gene, day7_fecal.sig_inject$gene)
+# 
+# day14_fecal.PW_wilc_per_gene <- day14_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs)) %>%
+#   select(gene, pps) %>% unnest()
+# colnames(day14_fecal.PW_wilc_per_gene)
+# range(day14_fecal.PW_wilc_per_gene$`Control_vs_InFeed`)
+# colnames(day14_fecal.PW_wilc_per_gene)[3]<-"Control_vs_Feed"
+# day14_fecal.sigs_feed <- day14_fecal.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.05)
+# day14_fecal.sig_inject <- day14_fecal.PW_wilc_per_gene %>% filter(Control_vs_Inject < 0.05)
+# day14_marginal_feed<-day14_fecal.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.1)
+# 
+# D14_wilc <- c(day14_fecal.sigs_feed$gene, day14_fecal.sig_inject$gene)
+# 
+# # pldme.PW_wilc_per_gene <- pldme.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs)) %>%
+# #   select(gene, pps) %>% unnest()
+# # colnames(pldme.PW_wilc_per_gene)
+# # range(pldme.PW_wilc_per_gene$`Control_vs_In-Feed`)
+# # colnames(pldme.PW_wilc_per_gene)[3]<-"Control_vs_Feed"
+# # pldme.marg_sigs_feed <- pldme.PW_wilc_per_gene %>% filter(Control_vs_Feed < 0.1)
+# # pldme.marg_sig_inject <- pldme.PW_wilc_per_gene %>% filter(Control_vs_Inject < 0.1)
+# # #note that aph and intI3 are no longer significant with the addition of the two control pigs that were missed the first time
+# # write.table(pldme_ddct, file="Plasmidome_ddct.txt", sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+# # write.table(day7_fecal_ddct, file="Day7_fecal_ddct.txt", sep="\t", quote=FALSE, row.names=FALSE, col.names=TRUE)
+# # #not redoing the other figures since Jules' is going to add the LOD lines on them
+# # 
+# #modifying Jules' function to do a t-test instead of wilcox
+# get_paired_t <- function(df){
+#   pp <- pairwise.t.test(df$response, df$Treatment, p.adjust.method="none")
+#   ppdf <- as.data.frame(pp$p.value)
+#   ps <- data.frame(matrix(c(pp$p.value), nrow = 1))
+#   names(ps) <-paste(c(rep(names(ppdf), each = nrow(ppdf))), "_vs_", rep(rownames(ppdf), ncol(ppdf)), sep = "")
+#   ps
+# }
+# bonferroni_day7_fecal.PW_ttest_per_gene <- day7_fecal.ddct.gather %>%
+#   group_by(gene) %>%
+#   nest() %>%
+#   mutate(pps = map(data, get_paired_t)) %>%
+#   select(gene, pps) %>%
+#   unnest()
+# 
+# bonferroni_day14_fecal.PW_ttest_per_gene <- day14_fecal.ddct.gather %>%
+#   group_by(gene) %>%
+#   nest() %>%
+#   mutate(pps = map(data, get_paired_t)) %>%
+#   select(gene, pps) %>%
+#   unnest()
+# 
+# # bonferroni_pldme.PW_ttest_per_gene <- pldme.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_paired_t)) %>%
+# #   select(gene, pps) %>% unnest()
+# # 
+# 
+# 
+# colnames(bonferroni_day7_fecal.PW_ttest_per_gene)[3]<-"Control_vs_Feed"
+# sig.day7.fecal.PW.ttest <- subset(bonferroni_day7_fecal.PW_ttest_per_gene, Control_vs_Inject < 0.05 | Control_vs_Feed < 0.05)
+# 
+# colnames(bonferroni_day14_fecal.PW_ttest_per_gene)[3]<-"Control_vs_Feed"
+# sig.day14.fecal.PW.ttest <- subset(bonferroni_day14_fecal.PW_ttest_per_gene, Control_vs_Inject < 0.05 | Control_vs_Feed < 0.05)
+# 
+# # colnames(bonferroni_pldme.PW_ttest_per_gene)[3]<-"Control_vs_Feed"
+# # sig.pldme.PW.ttest <- subset(bonferroni_pldme.PW_ttest_per_gene, Control_vs_Inject < 0.05 | Control_vs_Feed < 0.05)
 
 sig_day7<-sig.day7.fecal.PW.ttest$gene
-day7_fecal.ddct.gather %>% subset(gene %in% sig_day7) %>%
-  ggplot(aes(x=Treatment, y=response, group=Treatment, fill=Treatment)) +
-  geom_boxplot(outlier.color = NA) + facet_wrap(~gene, scales = 'free') + ylab('log2 fold change') + 
-  geom_jitter(shape = 21, width = .15) + theme_bw() #+
   # ggtitle('Day 7 Significant Genes delta delta CT relative to control mean')
 #shape = 21 must be open circles
-
-sig_day14<-sig.day14.fecal.PW.ttest$gene
-day14_fecal.ddct.gather %>% subset(gene %in% sig_day14) %>%
-  ggplot(aes(x=Treatment, y=response, group=Treatment, fill=Treatment)) +
-  geom_boxplot(outlier.color = NA) + facet_wrap(~gene, scales = 'free') + ylab('log2 fold change') + 
-  geom_jitter(shape = 21, width = .15) + theme_bw()
+# 
+# sig_day14<-sig.day14.fecal.PW.ttest$gene
+# day14_fecal.ddct.gather %>% subset(gene %in% sig_day14) %>%
+#   ggplot(aes(x=Treatment, y=response, group=Treatment, fill=Treatment)) +
+#   geom_boxplot(outlier.color = NA) + facet_wrap(~gene, scales = 'free') + ylab('log2 fold change') + 
+#   geom_jitter(shape = 21, width = .15) + theme_bw()
 
 
 #################
@@ -414,17 +411,17 @@ day14_fecal.ddct.gather$Treatment[day14_fecal.ddct.gather$Treatment == 'Control'
 day7_fecal.ddct.gather$Treatment <- factor(day7_fecal.ddct.gather$Treatment, levels = c('NM', 'Inject', 'Feed'))
 day14_fecal.ddct.gather$Treatment <- factor(day14_fecal.ddct.gather$Treatment, levels = c('NM', 'Inject', 'Feed'))
 
-day7_fecal.ddct.gather %>% subset(gene %in% D7_wilc) %>%
+day7_fecal.ddct.gather %>% filter(gene %in% sig_day7$gene) %>%
   ggplot(aes(x=Treatment, y=response, group=Treatment, fill=Treatment)) +
   geom_boxplot(outlier.color = NA) + facet_wrap(~gene, scales = 'free') + ylab('log2 fold change') + 
   geom_jitter(shape = 21, width = .15) + theme_bw() #+
 # ggtitle('Day 7 Significant Genes delta delta CT relative to control mean')
 #shape = 21 must be open circles
-
-day14_fecal.ddct.gather %>% subset(gene %in% D14_wilc) %>%
-  ggplot(aes(x=Treatment, y=response, group=Treatment, fill=Treatment)) +
-  geom_boxplot(outlier.color = NA) + facet_wrap(~gene, scales = 'free') + ylab('log2 fold change') + 
-  geom_jitter(shape = 21, width = .15) + theme_bw()
+# 
+# day14_fecal.ddct.gather %>% subset(gene %in% D14_wilc) %>%
+#   ggplot(aes(x=Treatment, y=response, group=Treatment, fill=Treatment)) +
+#   geom_boxplot(outlier.color = NA) + facet_wrap(~gene, scales = 'free') + ylab('log2 fold change') + 
+#   geom_jitter(shape = 21, width = .15) + theme_bw()
 
 
 
@@ -446,38 +443,38 @@ day14_fecal.ddct.gather %>% subset(gene %in% D14_wilc) %>%
 
 
 #is the data normally distributed?
-shapiro.test(day7_fecal.ddct.gather$response)
-aph <- day7_fecal.ddct.gather %>% subset(gene=="aph2'-Id_104")
-shapiro.test(aph$response)
-aph_pldme <- pldme.ddct.gather %>% subset(gene=="aph2-Id-104")
-shapiro.test(aph_pldme$response)
-bla<-pldme.ddct.gather %>% subset(gene=="blaROB-41")
-shapiro.test(bla$response)
-hist(aph_pldme$response)
-
-qqnorm(day7_fecal.ddct.gather$response)
-qqnorm(day14_fecal.ddct.gather$response)
-qqnorm(pldme.ddct.gather$response)
-hist(day7_fecal.ddct.gather$response)
-hist(day14_fecal.ddct.gather$response)
-hist(pldme.ddct.gather$response)
+# shapiro.test(day7_fecal.ddct.gather$response)
+# aph <- day7_fecal.ddct.gather %>% subset(gene=="aph2'-Id_104")
+# shapiro.test(aph$response)
+# aph_pldme <- pldme.ddct.gather %>% subset(gene=="aph2-Id-104")
+# shapiro.test(aph_pldme$response)
+# bla<-pldme.ddct.gather %>% subset(gene=="blaROB-41")
+# shapiro.test(bla$response)
+# hist(aph_pldme$response)
+# 
+# qqnorm(day7_fecal.ddct.gather$response)
+# qqnorm(day14_fecal.ddct.gather$response)
+# qqnorm(pldme.ddct.gather$response)
+# hist(day7_fecal.ddct.gather$response)
+# hist(day14_fecal.ddct.gather$response)
+# hist(pldme.ddct.gather$response)
  #histograms for day 14 and pldme are each skewed in different directions.  Day 14 has higher +1 range compared to -1.  Pldme is the opposite.
 #day 7 fecal has a normal distribution, with much higher numbers in teh -1 to +1 range and then dropping off.
 
 #Jules suggested trying the fdr correction instead of holm for the data to see if it makes a difference (still using wilcox)
-get_pairs_wilcox_fdr <- function(df){
-  pp <- pairwise.wilcox.test(df$response, df$Treatment, p.adjust.method="fdr")
-  ppdf <- as.data.frame(pp$p.value)
-  ps <- data.frame(matrix(c(pp$p.value), nrow = 1))
-  names(ps) <-paste(c(rep(names(ppdf), each = nrow(ppdf))), "_vs_", rep(rownames(ppdf), ncol(ppdf)), sep = "")
-  ps
-}
-
-colnames(day7_fecal.ddct.gather)
-day7_fecal.PW_wilc_fdr <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs_wilcox_fdr)) %>%
-  select(gene, pps) %>% unnest()
-pldme.PW_wilc_fdr <- pldme.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps=map(data, get_pairs_wilcox_fdr)) %>%
-  select(gene, pps) %>% unnest()
+# get_pairs_wilcox_fdr <- function(df){
+#   pp <- pairwise.wilcox.test(df$response, df$Treatment, p.adjust.method="fdr")
+#   ppdf <- as.data.frame(pp$p.value)
+#   ps <- data.frame(matrix(c(pp$p.value), nrow = 1))
+#   names(ps) <-paste(c(rep(names(ppdf), each = nrow(ppdf))), "_vs_", rep(rownames(ppdf), ncol(ppdf)), sep = "")
+#   ps
+# }
+# 
+# colnames(day7_fecal.ddct.gather)
+# day7_fecal.PW_wilc_fdr <- day7_fecal.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps = map(data, get_pairs_wilcox_fdr)) %>%
+#   select(gene, pps) %>% unnest()
+# pldme.PW_wilc_fdr <- pldme.ddct.gather %>% group_by(gene) %>% nest() %>% mutate(pps=map(data, get_pairs_wilcox_fdr)) %>%
+#   select(gene, pps) %>% unnest()
 
 #need to make a table with all the meanCT values
 # View(day7_fecal.goods)

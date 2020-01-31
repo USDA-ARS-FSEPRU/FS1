@@ -43,7 +43,6 @@ meta$Group # checking on the sample names....
 master <- read.csv("./data/FS1master.csv", header = TRUE, stringsAsFactors = TRUE) 
 
 colnames(master)[1] <- 'pig_number'
-
 mastermeta <- merge(meta, master, by = 'pig_number')
 colnames(mastermeta)[12] <- 'birth_room'
 colnames(mastermeta)[15] <- 'initial_weight'
@@ -57,8 +56,6 @@ mastermeta$set <- paste(day, mastermeta$tissue, mastermeta$treatment, sep = '_')
 
 rownames(mastermeta) <- mastermeta$Group
 
-#mastermeta <- mastermeta[,-2]
-mastermeta
 rownames(shared) <- shared[,2]
 shared <- shared[,-c(1,2,3)]
 shared <- shared[rownames(shared) %in% rownames(mastermeta),]
@@ -67,24 +64,20 @@ tax<-read.table("./data/FS1.V4.taxonomy", header = TRUE, stringsAsFactors = FALS
 colnames(tax)
 library(tidyverse)
 
-# this has changed....
 tax <- tax %>% separate(Taxonomy, into=c("Kingdom", "Phylum", "Class", "Order", "Genus","Species"), sep=";", extra="merge", remove=TRUE)
-#still NR - need to get rid of the numbers following each assignment
+
 tax$Genus <- gsub("\\s*\\([^\\)]+\\)", "", tax$Genus)
 
 
-#NR - can't figure out how to do this for every column at once so just did Genus for now
-#JT - this does the gsub command on every column 
-# apply(X = tax, MARGIN = 2, FUN = gsub, pattern = "\\s*\\([^\\)]+\\)", replace = "", tax$Genus)
-#
-
-# tax[grep('Mitochondria', tax$Genus),]
-shared <- shared[,-grep('Mitochondria', tax$Genus)]
-shared <- shared[,-grep('Chloroplast', tax$Genus)]  #NR added this as well
+shared <- shared[,-grep('Mitochondria', tax$Genus)]  # removes OTUS matching mitochondria
+shared <- shared[,-grep('Chloroplast', tax$Genus)]   # removes OTUS matching chloroplasts
 
 shared <- shared[rowSums(shared) > 2000,] # removes samples with less than 2000 reads
 shared <- shared[,colSums(shared) > 10] # removes OTUs occuring less than 10 times globally
-mastermeta <- mastermeta[rownames(mastermeta) %in% rownames(shared),]
+
+
+# limits metadata to only samples in the OTU tables after filtering
+mastermeta <- mastermeta[rownames(mastermeta) %in% rownames(shared),]  
 
 # 314 samples
 
@@ -96,8 +89,6 @@ mastermeta <- mastermeta %>% filter(tissue != 'Ileum')
 # write.csv(all_groups, 'pigs_per_group.csv')
 shared <- shared[rownames(shared) %in% mastermeta$Group,]
 
-min(rowSums(shared))
-library(vegan)
 share.rare <- rrarefy(shared, min(rowSums(shared)))  # rarrefied for alpha and beta diversity calcs
 
 rownames(share.rare) == rownames(mastermeta)  # these two dataframes are in different orders, we need to fix this
@@ -108,22 +99,15 @@ rownames(share.rare) == mastermeta$Group# this confirms that they are in the sam
 share.rare2 <- share.rare # for boxplots later on
 # write.table(mastermeta, 'FS1.mastermeta.txt', quote = FALSE, sep = '\t')
 
-# read.table('FS1.mastermeta.txt', header = TRUE)
-########## alpha diversity?  ##########
-
-# rowSums(share.rare)
+########## alpha diversity  ##########
 
 mastermeta$shannon <- diversity(share.rare)
-
 
 mastermeta %>% filter(tissue=='Feces') %>%  
   ggplot(aes(x=day, y=shannon, group=set, fill=treatment)) + geom_boxplot() + ggtitle('Alpha diversity: Feces') + ylab("Shannon Diversity Index")
 
 mastermeta %>% filter(tissue=='Colon') %>%  
   ggplot(aes(x=day, y=shannon, group=set, fill=treatment)) + geom_boxplot() + ggtitle('Alpha diversity: Colon')+ ylab("Shannon Diversity Index")
-
-# mastermeta %>% filter(tissue=='Ileum') %>% 
-#   ggplot(aes(x=day, y=shannon, group=set, fill=treatment)) + geom_boxplot() + ggtitle('Alpha diversity: Ileum')+ ylab("Shannon Diversity Index")
 
 
 ### Only doing feces here ###
@@ -269,6 +253,7 @@ D14 <- grep("D14_Feces_.* vs D14_Feces_.*", PWadon$pairs)
 
 PWadon.good <- PWadon[c(D0, D4, D7, D11, D14),]
 
+### pvalue correction here ###
 PWadon.good$p.adjusted <- signif(p.adjust(PWadon.good$p.value, method = 'fdr'), digits = 3)
 
 # specify output folder
@@ -1101,34 +1086,34 @@ fobar.gather %>% filter(tissue == 'Feces' & day == 7) %>%
 
 ## Colon ##
 goods <- c("Bacteroidetes", "Firmicutes", "Proteobacteria", "Euryarchaeota", "Fibrobacteres","Actinobacteria" )
-library(ggsignif)
+# library(ggsignif)
+# 
+# 
+# fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
+#   filter(phylum %in% goods) %>% 
+#   ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
+#   geom_jitter(shape=21, width = .15)+
+#   facet_wrap(~phylum, scales = 'free')+
+#   geom_signif(comparisons = combn(levels(fobar.gather$treatment2), 2, simplify = F), 
+#               map_signif_level = T, test = 't.test')+
+#   ggtitle("Day 4: Colon") +
+#   scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
+#   ylab('Percent of Total Community') +
+#   xlab('')+ theme_bw()
 
 
-fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
-  filter(phylum %in% goods) %>% 
-  ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
-  geom_jitter(shape=21, width = .15)+
-  facet_wrap(~phylum, scales = 'free')+
-  geom_signif(comparisons = combn(levels(fobar.gather$treatment2), 2, simplify = F), 
-              map_signif_level = T, test = 't.test')+
-  ggtitle("Day 4: Colon") +
-  scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
-  ylab('Percent of Total Community') +
-  xlab('')+ theme_bw()
-
-
-fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
-  filter(phylum %in% goods) %>% 
-  ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
-  geom_jitter(shape=21, width = .15)+
-  facet_wrap(~phylum, scales = 'free')+
-  geom_signif(map_signif_level = T, test = 't.test')+
-  ggtitle("Day 4: Colon") +
-  #scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
-  ylab('Percent of Total Community') +
-  xlab('')+ theme_bw()
-
-
+# fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
+#   filter(phylum %in% goods) %>% 
+#   ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
+#   geom_jitter(shape=21, width = .15)+
+#   facet_wrap(~phylum, scales = 'free')+
+#   geom_signif(map_signif_level = T, test = 't.test')+
+#   ggtitle("Day 4: Colon") +
+#   #scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
+#   ylab('Percent of Total Community') +
+#   xlab('')+ theme_bw()
+# 
+# 
 
 
 
@@ -1162,7 +1147,7 @@ phyla_tests <- fobar.gather %>%
   mutate(tests_tidy = map(tests, broom::tidy)) %>%
   select(day, tissue, phylum, tests_tidy) %>%
   unnest() #%>%
-  mutate(p.value = round(p.value, 3))
+  # mutate(p.value = round(p.value, 3))
 
 
 phyla_t_tests <- fobar.gather %>%
@@ -1172,7 +1157,7 @@ phyla_t_tests <- fobar.gather %>%
   mutate(tests_tidy = map(tests, broom::tidy)) %>%
   select(day, tissue, phylum, tests_tidy) %>%
   unnest() #%>%
-  mutate(p.value = round(p.value, 3))
+  # mutate(p.value = round(p.value, 3))
 
   
   
