@@ -292,7 +292,7 @@ p2 <- ggplot(PWadon.tocont, aes(x=day, y=F.Model, color=treatment)) +
   geom_vline(xintercept = 3, color='purple', size = 1, alpha=.75) +
   geom_label(aes(label=p.adjusted, fill=treatment), color='black', show.legend = FALSE) +
   scale_color_manual(values = c('#00BA38', '#619CFF'), labels = c('Inject', 'Feed'), name='Treatment')+
-  ylab('PERMANOVA F vs NM') + theme_bw()
+  ylab('PERMANOVA F vs NM') + theme_bw() + ylim(.5,4)
 p2 
 
 ##### feces ordination ######  
@@ -709,7 +709,7 @@ FS1 <- prune_taxa(taxa = prune_vec, x = FS1)
 
 Deseq_plots2 <- function(phyloseq_obj, DAY, TIS, cooks_cut = TRUE,
                          pAdjustMethod = 'BH', shrink_type = 'normal', 
-                         tax_lab, alpha=0.05, alpha_filt=0.05){
+                         tax_lab, alpha=0.05, alpha_filt=0.05, text_size=3){
   tax_lab <- enquo(tax_lab)
   print(DAY)
   print(TIS)
@@ -810,7 +810,7 @@ Deseq_plots2 <- function(phyloseq_obj, DAY, TIS, cooks_cut = TRUE,
                              fill = Treatment)) + 
     geom_bar(stat='identity', position=position_dodge(preserve = 'single')) + coord_flip() + 
     geom_text(data=D4_labs, aes(x=OTU, y=0, label=!!tax_lab),
-              inherit.aes = FALSE, size=4, fontface='italic', vjust=-.2) +
+              inherit.aes = FALSE, size=text_size, fontface='italic', vjust=-.2) +
     scale_fill_manual(values = c('royalblue', 'skyblue', 'forestgreen', 'lightgreen'), drop=FALSE) +xlab('Order') + 
     theme(axis.text.y=element_blank(), 
           axis.ticks.y = element_blank()) #+ ylim(-5, 5)
@@ -1003,10 +1003,18 @@ col_d4 <- Deseq_plots2(FS1.glom, DAY=4, TIS='Colon', tax_lab = Order)
 col_d7 <- Deseq_plots2(FS1.glom, DAY=7, TIS='Colon', tax_lab = Order)
 
 
-fec_d4[[1]] + ylim(-5,5)  # D4 feces order
-fec_d7[[1]] + ylim(-6,6)  # D7 feces order
 
-col_d4[[1]] + ylim(-5,5)  # D4 colon order
+# THESE FOR FIG4
+# D4 feces order
+fig4A <- fec_d4[[1]] + ylim(-5,5) +
+  theme_bw()
+# D7 feces order
+fig4B <- fec_d7[[1]] + ylim(-6,6) + theme_bw()  
+
+
+
+
+fig5B <- col_d4[[1]] + ylim(-5,5) +theme_bw() # D4 colon order
 col_d7[[1]] + ylim(-8,6)  # D7 colon order
 
 
@@ -1089,33 +1097,46 @@ goods <- c("Bacteroidetes", "Firmicutes", "Proteobacteria", "Euryarchaeota", "Fi
 # library(ggsignif)
 # 
 # 
-# fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
-#   filter(phylum %in% goods) %>% 
-#   ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
-#   geom_jitter(shape=21, width = .15)+
-#   facet_wrap(~phylum, scales = 'free')+
-#   geom_signif(comparisons = combn(levels(fobar.gather$treatment2), 2, simplify = F), 
-#               map_signif_level = T, test = 't.test')+
-#   ggtitle("Day 4: Colon") +
-#   scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
-#   ylab('Percent of Total Community') +
-#   xlab('')+ theme_bw()
+fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
+  filter(phylum %in% goods) %>%
+  ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
+  geom_jitter(shape=21, width = .15)+
+  facet_wrap(~phylum, scales = 'free')+
+  #geom_signif(comparisons = combn(levels(fobar.gather$treatment2), 2, simplify = F),
+  #            map_signif_level = T, test = 't.test')+
+  ggtitle("Day 4: Colon") +
+  scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
+  ylab('Percent of Total Community') +
+  xlab('')+ theme_bw()
 
 
 # fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
-#   filter(phylum %in% goods) %>% 
+#   filter(phylum %in% goods) %>%
 #   ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
 #   geom_jitter(shape=21, width = .15)+
 #   facet_wrap(~phylum, scales = 'free')+
-#   geom_signif(map_signif_level = T, test = 't.test')+
+#   # geom_signif(map_signif_level = T, test = 't.test')+
 #   ggtitle("Day 4: Colon") +
 #   #scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
 #   ylab('Percent of Total Community') +
 #   xlab('')+ theme_bw()
-# 
-# 
 
 
+## FIGURE 5A ###
+
+dat5a <- fobar.gather %>% filter(tissue == 'Colon' & day == 4) %>%
+  filter(phylum %in% goods)
+
+FIG5A <- dat5a %>% ggplot(aes(x=treatment2, y=percent_tot, group=set, fill=treatment)) + geom_boxplot(position = position_dodge2(preserve = 'total'), outlier.colour = NA) +
+  geom_jitter(shape=21, width = .15)+
+  facet_wrap(~phylum, scales = 'free')+
+  ggtitle("Day 4: Colon") +
+  scale_fill_discrete(name='Treatment', labels=c('NM', 'Inject', 'Feed')) +
+  ylab('Percent of Total Community') +
+  xlab('')+ theme_bw()
+
+
+FIG5A
 
 unique(fobar.gather$phylum)
 
@@ -1194,6 +1215,8 @@ write_csv(phyla_tests, './output/Wilcox_phyla_tests.csv')
 ###### Cowplot zone #####
 library(cowplot)
 
+
+# figure 3 #
 p2
 p3
 
@@ -1201,11 +1224,64 @@ F7_ord
 C7_ord
 
 
-fig.X <- ggdraw()+
+fig_3 <- ggdraw()+
   draw_plot(p2, 0.03,.5,.45,.5)+
   draw_plot(p3, .5,.5,.5,.5)+
   draw_plot(F7_ord, .03,0,.45,.5)+
   draw_plot(C7_ord, .5,0,.5,.5)+
   draw_plot_label(x=c(0,.48, 0, .48), y=c(1,1, .5,.5), label = c('A', 'B', 'C','D'))
-fig.X
+fig_3
+
+
+ggsave(fig_3,
+       filename = './output/new_figs/figure3.jpeg',
+       width = 180,
+       height = 150,
+       device = 'jpeg',
+       dpi = 300,
+       units = 'mm')
+
+# fig 4  #
+
+fig4A
+fig4B
+
+
+fig_4_option1 <- ggdraw()+
+  draw_plot(fig4A, x=0.03,y=.55,width=.91,height=.45)+
+  draw_plot(fig4B, x=0.03,y=0,width=.91,height=.55)+
+  draw_plot_label(x=c(0,0), y=c(1,.5), label = c('A', 'B'))
+fig_4_option1
+
+
+ggsave(fig_4_option1,
+       filename = './output/new_figs/figure4.jpeg',
+       width = 180,
+       height = 150,
+       device = 'jpeg',
+       dpi = 300,
+       units = 'mm')
+
+
+# fig 5 #
+FIG5A
+fig5B
+
+fig_5_option1 <- ggdraw()+
+  draw_plot(FIG5A, x=0.03,y=.55,width=.91,height=.45)+
+  draw_plot(fig5B, x=0.03,y=0,width=.91,height=.55)+
+  draw_plot_label(x=c(0,0), y=c(1,.5), label = c('A', 'B'))+
+  draw_plot_label(x=c(.444,.50,.746), y=c(.858,.858,.72),
+                  label = c('*', '*', '*'))
+fig_5_option1
+
+
+ggsave(fig_5_option1,
+       filename = './output/new_figs/figure5.jpeg',
+       width = 180,
+       height = 220,
+       device = 'jpeg',
+       dpi = 300,
+       units = 'mm')
+
 

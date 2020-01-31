@@ -68,7 +68,7 @@ tis.melt$Tissue <- ifelse(tis.melt$tissue == 'Serum', 'Plasma',
 
 tis.melt$Treatment <- factor(tis.melt$Treatment, levels = c('NM', 'Inject', 'Feed'))
 
-tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
+fig2 <- tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   filter(Tissue %in% c('Feces', 'Plasma')) %>% 
   filter(day != 0) %>% 
   ggplot(aes(x=day, y=concentration, group=dayXtreat, fill=Treatment)) +
@@ -76,6 +76,17 @@ tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
   ylab('Concentration of Oxytetracycline (ng/mL)') + xlab('Day') + scale_y_log10(labels=scales::scientific) +
   facet_wrap(~Tissue, scales = 'free')+
   theme_bw() + scale_fill_manual(values = c('#00BA38', '#619CFF'))
+
+fig2
+
+ggsave(fig2,
+       filename = './output/new_figs/figure2.jpeg',
+       width = 180,
+       height = 120,
+       device = 'jpeg',
+       dpi = 300,
+       units = 'mm')
+
 
 # tis.melt %>% filter(Treatment %in% c('Inject', 'Feed')) %>%
 #   #filter(Tissue %in% c('Feces', 'Plasma')) %>% 
@@ -204,9 +215,20 @@ colnames(meta)[6] <- 'Weight'
 tis.meta <- tis.melt %>% left_join(meta)
 tis.meta$Weight <- as.numeric(tis.meta$Weight)
 
-tis.meta %>% filter(day==1) %>%
+fig1 <- tis.meta %>% filter(day==1) %>%
   ggplot(aes(x=Weight, y=concentration, color=Treatment)) +
   geom_smooth(method = 'lm') + geom_point() + theme_bw() +ylab('Concentration of Oxytetracycline (ng/mL)') + xlab("Weight (kg)")
+
+
+fig1
+
+ggsave(fig1,
+       filename = './output/new_figs/figure1.jpeg',
+       width = 180,
+       height = 120,
+       device = 'jpeg',
+       dpi = 300,
+       units = 'mm')
 
 
 

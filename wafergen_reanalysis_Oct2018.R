@@ -411,10 +411,22 @@ day14_fecal.ddct.gather$Treatment[day14_fecal.ddct.gather$Treatment == 'Control'
 day7_fecal.ddct.gather$Treatment <- factor(day7_fecal.ddct.gather$Treatment, levels = c('NM', 'Inject', 'Feed'))
 day14_fecal.ddct.gather$Treatment <- factor(day14_fecal.ddct.gather$Treatment, levels = c('NM', 'Inject', 'Feed'))
 
-day7_fecal.ddct.gather %>% filter(gene %in% sig_day7$gene) %>%
+FIG6 <- day7_fecal.ddct.gather %>% filter(gene %in% sig_day7$gene) %>%
   ggplot(aes(x=Treatment, y=response, group=Treatment, fill=Treatment)) +
   geom_boxplot(outlier.color = NA) + facet_wrap(~gene, scales = 'free') + ylab('log2 fold change') + 
   geom_jitter(shape = 21, width = .15) + theme_bw() #+
+
+FIG6
+
+ggsave(FIG6,
+       filename = './output/new_figs/figure6.jpeg',
+       width = 180,
+       height = 75,
+       device = 'jpeg',
+       dpi = 300,
+       units = 'mm')
+
+
 # ggtitle('Day 7 Significant Genes delta delta CT relative to control mean')
 #shape = 21 must be open circles
 # 
