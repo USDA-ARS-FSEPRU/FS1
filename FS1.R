@@ -737,7 +737,7 @@ Deseq_plots2 <- function(phyloseq_obj, DAY, TIS, cooks_cut = TRUE,
     # sigtab_Feed$newp <- format(round(sigtab_Feed$padj, digits = 5), scientific = TRUE)
     sigtab_Feed$Treatment <- ifelse(sigtab_Feed$log2FoldChange >=0, "Feed", "NM")
     
-    sigtab_Feed$Treatment <- ifelse(sigtab_Feed$log2FoldChange >=0, "Enriched in Feed", "Depleted in Feed")
+    sigtab_Feed$Treatment <- ifelse(sigtab_Feed$log2FoldChange >=0, 'Enriched in "Feed"', 'Depleted in "Feed"')
     # sigtab_Feed <- sigtab_Feed %>% select(log2FoldChange, Kingdom, Phylum, Class, Order, Treatment, Genus)
     # # colnames(sigtab_Feed)[1]<-"log2FoldChange"
     sigtab_Feed$OTU<-rownames(sigtab_Feed)
@@ -761,7 +761,7 @@ Deseq_plots2 <- function(phyloseq_obj, DAY, TIS, cooks_cut = TRUE,
     
     #need to pull these into a combined table and label the log2FoldChange by treatment and changing the labels to show which control is which
     
-    sigtab_Inject$Treatment <- ifelse(sigtab_Inject$log2FoldChange >=0, "Enriched in Inject", "Depleted in Inject")
+    sigtab_Inject$Treatment <- ifelse(sigtab_Inject$log2FoldChange >=0, 'Enriched in "Inject"', 'Depleted in "Inject"')
     # sigtab_Inject <- sigtab_Inject %>% select(log2FoldChange, Kingdom, Phylum, Class, Order, Treatment, Genus)
     # # colnames(sigtab_Inject)[1]<-"log2FoldChange"
     sigtab_Inject$OTU<-rownames(sigtab_Inject)
@@ -790,10 +790,10 @@ Deseq_plots2 <- function(phyloseq_obj, DAY, TIS, cooks_cut = TRUE,
     return(NULL)
   }
   
-  D4.sigs$Treatment<-factor(D4.sigs$Treatment, levels=c("Enriched in Feed",
-                                                        "Enriched in Inject",
-                                                        "Depleted in Feed",
-                                                        "Depleted in Inject"), ordered=TRUE)
+  D4.sigs$Treatment<-factor(D4.sigs$Treatment, levels=c('Enriched in "Feed"',
+                                                        'Enriched in "Inject"',
+                                                        'Depleted in "Feed"',
+                                                        'Depleted in "Inject"'), ordered=TRUE)
   
   
   D4.sigs <- D4.sigs[order(D4.sigs$log2FoldChange),]
